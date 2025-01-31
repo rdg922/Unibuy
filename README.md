@@ -1,6 +1,26 @@
-# Create T3 App
-
 This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+
+# Class Project - Getting Started
+
+For this project, you will need npm installed on your machine. You can find installation instructions here: [npm install docs](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+
+1. Copy the `.env.example` file to a new file named `.env`.
+2. Go to the Discord developer portal (<https://discord.com/developers/applications>), create or open your application, then copy the "Client ID" and "Client Secret" from the "General Information" tab. If you haven't created an application yet, click "New Application" first.
+3. Replace the placeholders in the `.env` file with your Discord credentials.
+4. Install dependencies:
+   ```bash
+   npm install
+   ```
+5. Push database changes:
+   ```bash
+   npm run db:push
+   ```
+6. Run in development mode:
+   ```bash
+   npm run dev
+   ```
+
+
 
 ## What's next? How do I make an app with this?
 
