@@ -1,2 +1,2 @@
-# Robay
-RoBay is an online store that allows users to buy Rohit’s items.
+# Unibuy
+Unibuy is a marketplace connecting students moving out or graduating with students looking for affordable items.
