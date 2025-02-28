@@ -24,6 +24,7 @@ declare module "next-auth" {
       id: string;
       // ...other properties
       // role: UserRole;
+      emailVerified: Date | null;
     } & DefaultSession["user"];
   }
 
@@ -68,11 +69,17 @@ export const authConfig = {
           return null;
         }
 
+        // Check if email is verified
+        if (!user.emailVerified) {
+          throw new Error("Email not verified. Please check your inbox.");
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           image: user.image,
+          emailVerified: user.emailVerified,
         };
       },
     }),
@@ -95,7 +102,14 @@ export const authConfig = {
       user: {
         ...session.user,
         id: token.sub,
+        emailVerified: token.emailVerified as Date | null,
       },
     }),
+    jwt: ({ token, user }) => {
+      if (user) {
+        token.emailVerified = user.emailVerified;
+      }
+      return token;
+    },
   },
 } satisfies NextAuthConfig;

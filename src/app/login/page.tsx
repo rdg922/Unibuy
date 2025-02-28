@@ -2,16 +2,24 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+
+  // Show message if redirected after registration
+  const registered = searchParams.get("registered") === "true";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
     try {
       const result = await signIn("credentials", {
@@ -21,13 +29,47 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        if (result.error.includes("Email not verified")) {
+          setError("Please verify your email before signing in.");
+        } else {
+          setError("Invalid email or password");
+        }
       } else {
         router.push("/");
         router.refresh();
       }
     } catch (error) {
       setError("Something went wrong");
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError("Please enter your email address");
+      return;
+    }
+
+    setIsResendingVerification(true);
+    try {
+      const response = await fetch("/api/resend-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        setResendSuccess(true);
+        setError("");
+      } else {
+        const data = await response.json();
+        setError(data.error || "Failed to resend verification email");
+      }
+    } catch (error) {
+      setError("Something went wrong");
+    } finally {
+      setIsResendingVerification(false);
     }
   };
 
@@ -40,13 +82,42 @@ export default function LoginPage() {
           </h2>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
+        {registered && (
+          <div className="rounded-md bg-green-50 p-4">
+            <p className="text-sm text-green-700">
+              Registration successful! Please check your email to verify your
+              account before signing in.
+            </p>
+          </div>
+        )}
 
+        {resendSuccess && (
+          <div className="rounded-md bg-green-50 p-4">
+            <p className="text-sm text-green-700">
+              Verification email sent. Please check your inbox.
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <div className="rounded-md bg-red-50 p-4">
+            <p className="text-sm text-red-700">{error}</p>
+            {error.includes("verify your email") && (
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={isResendingVerification}
+                className="mt-2 text-sm font-medium text-red-700 hover:text-red-600"
+              >
+                {isResendingVerification
+                  ? "Sending..."
+                  : "Resend verification email"}
+              </button>
+            )}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
           <div className="-space-y-px rounded-md shadow-sm">
             <div>
               <label htmlFor="email" className="sr-only">
@@ -90,6 +161,17 @@ export default function LoginPage() {
               Sign in
             </button>
           </div>
+
+          <div className="text-center"></div>
+          <p className="text-sm text-gray-600">
+            Don't have an account?{" "}
+            <Link
+              href="/register"
+              className="font-medium text-indigo-600 hover:text-indigo-500"
+            >
+              Register
+            </Link>
+          </p>
         </form>
       </div>
     </div>
