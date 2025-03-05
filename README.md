@@ -19,3 +19,7 @@ Run locally:
 ```
 npm start
 ```
+
+## Email Verification:
+
+Note: when creating an account, you will need to 'verify' your email, but for development environments, the 'email' will instead be printed in the console, go to the given redirect link to verify your email
