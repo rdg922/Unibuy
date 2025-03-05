@@ -5,6 +5,7 @@ import {
   primaryKey,
   sqliteTableCreator,
   text,
+  real,
 } from "drizzle-orm/sqlite-core";
 import { type AdapterAccount } from "next-auth/adapters";
 
@@ -21,6 +22,11 @@ export const posts = createTable(
   {
     id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
     name: text("name", { length: 256 }),
+    description: text("description", { length: 1000 }).default(""),
+    price: real("price").default(0),
+    condition: text("condition", { length: 50 }).default("used"),
+    category: text("category", { length: 100 }).default("other"),
+    imageUrl: text("image_url"),
     createdById: text("created_by", { length: 255 })
       .notNull()
       .references(() => users.id),
@@ -34,6 +40,7 @@ export const posts = createTable(
   (example) => ({
     createdByIdIdx: index("created_by_idx").on(example.createdById),
     nameIndex: index("name_idx").on(example.name),
+    categoryIndex: index("category_idx").on(example.category),
   }),
 );
 
