@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { LatestPost } from "~/app/_components/post";
+import { UserItems } from "~/app/_components/post";
 import { auth } from "~/server/auth";
 import { api, HydrateClient } from "~/trpc/server";
 
@@ -9,7 +9,7 @@ export default async function Home() {
   const session = await auth();
 
   if (session?.user) {
-    void api.post.getLatest.prefetch();
+    void api.post.getUserItems.prefetch();
   }
 
   return (
@@ -18,34 +18,13 @@ export default async function Home() {
         <div className="w-full max-w-md space-y-8">
           <div>
             <h1 className="mt-6 text-center text-4xl font-bold tracking-tight text-gray-900">
-              SWE <span className="text-indigo-600">Shop</span>
+              uni <span className="text-indigo-600">Buy</span>
             </h1>
             <p className="mt-2 text-center text-sm text-gray-600">
-              Your one-stop shop for all SWE essentials
+              Your one-stop shop for all university hand-me-downs.
             </p>
           </div>
 
-          {/* Feature cards */}
-          {/* <div className="mt-8 space-y-4">
-            <div className="rounded-md border border-gray-200 p-4 shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900">
-                Browse Products
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Explore our collection of developer tools and resources
-              </p>
-            </div>
-            <div className="rounded-md border border-gray-200 p-4 shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900">
-                Developer Community
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Connect with other developers and share experiences
-              </p>
-            </div>
-          </div> */}
-
-          {/* Authentication section */}
           <div className="mt-6 flex flex-col items-center gap-4">
             {session ? (
               <>
@@ -90,7 +69,7 @@ export default async function Home() {
             <p>{hello ? hello.greeting : "Loading tRPC query..."}</p>
           </div>
 
-          {session?.user && <LatestPost />}
+          {session?.user && <UserItems />}
         </div>
       </main>
     </HydrateClient>
