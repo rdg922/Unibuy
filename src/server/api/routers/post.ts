@@ -6,7 +6,7 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import { posts } from "~/server/db/schema";
+import { posts, users } from "~/server/db/schema";
 
 export const postRouter = createTRPCRouter({
   hello: publicProcedure
@@ -60,6 +60,23 @@ export const postRouter = createTRPCRouter({
       where: eq(posts.createdById, ctx.session.user.id),
       limit: 100,
     });
+  }),
+
+  getAllItems: publicProcedure.query(async ({ ctx }) => {
+    const items = await ctx.db.query.posts.findMany({
+      orderBy: [desc(posts.createdAt)],
+      with: {
+        user: {
+          columns: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      limit: 100,
+    });
+
+    return items;
   }),
 
   getSecretMessage: protectedProcedure.query(() => {

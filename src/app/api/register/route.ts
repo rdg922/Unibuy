@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       name,
       email,
       password: hashedPassword,
-      // emailVerified is null by default
+      emailVerified: null, // explicitly set to null
     });
 
     // Generate a verification token

@@ -71,7 +71,8 @@ export const authConfig = {
 
         // Check if email is verified
         if (!user.emailVerified) {
-          throw new Error("Email not verified. Please check your inbox.");
+          // Using a specific error code that the frontend will check for
+          throw new Error("EMAIL_NOT_VERIFIED");
         }
 
         return {

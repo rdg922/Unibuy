@@ -6,6 +6,7 @@ import {
   sqliteTableCreator,
   text,
   real,
+  unique,
 } from "drizzle-orm/sqlite-core";
 import { type AdapterAccount } from "next-auth/adapters";
 
@@ -44,13 +45,20 @@ export const posts = createTable(
   }),
 );
 
+export const postsRelations = relations(posts, ({ one }) => ({
+  user: one(users, {
+    fields: [posts.createdById],
+    references: [users.id],
+  }),
+}));
+
 export const users = createTable("user", {
   id: text("id", { length: 255 })
     .notNull()
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name", { length: 255 }),
-  email: text("email", { length: 255 }).notNull(),
+  email: text("email", { length: 255 }).notNull().unique(), // Add unique constraint
   emailVerified: int("email_verified", {
     mode: "timestamp",
   }).default(sql`(unixepoch())`),
@@ -60,6 +68,7 @@ export const users = createTable("user", {
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
+  posts: many(posts),
 }));
 
 export const accounts = createTable(
@@ -120,5 +129,8 @@ export const verificationTokens = createTable(
   },
   (vt) => ({
     compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
+    identifierIdx: unique("verification_token_identifier_idx").on(
+      vt.identifier,
+    ), // Add unique constraint on identifier
   }),
 );

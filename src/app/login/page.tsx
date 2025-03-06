@@ -153,6 +153,17 @@ export default function LoginPage() {
             </div>
           </div>
 
+          <div className="mt-5 flex items-center justify-between">
+            <div className="text-sm">
+              <Link
+                href="/forgot-password"
+                className="font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                Forgot your password?
+              </Link>
+            </div>
+          </div>
+
           <div>
             <button
               type="submit"
@@ -162,16 +173,17 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="text-center"></div>
-          <p className="text-sm text-gray-600">
-            Don't have an account?{" "}
-            <Link
-              href="/register"
-              className="font-medium text-indigo-600 hover:text-indigo-500"
-            >
-              Register
-            </Link>
-          </p>
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{" "}
+              <Link
+                href="/register"
+                className="font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                Register
+              </Link>
+            </p>
+          </div>
         </form>
       </div>
     </div>

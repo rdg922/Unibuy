@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { eq } from "drizzle-orm";
+import { eq, and, gt } from "drizzle-orm";
 import { db } from "~/server/db";
 import { verificationTokens } from "~/server/db/schema";
 
@@ -14,23 +14,32 @@ export function generateToken(length = 32): string {
  * Create a verification token for a user
  */
 export async function createVerificationToken(
-  identifier: string,
-  expiresIn: number = 24 * 60 * 60 * 1000, // 24 hours in milliseconds
+  email: string,
+  expiresInHours = 24,
 ): Promise<string> {
+  // Generate a random token
   const token = generateToken();
-  const expires = new Date(Date.now() + expiresIn);
+  const expires = new Date(Date.now() + expiresInHours * 60 * 60 * 1000);
 
-  // Remove any existing tokens for this user
-  await db
-    .delete(verificationTokens)
-    .where(eq(verificationTokens.identifier, identifier));
-
-  // Create a new token
-  await db.insert(verificationTokens).values({
-    identifier,
-    token,
-    expires,
+  // Check if a token already exists for this identifier
+  const existingToken = await db.query.verificationTokens.findFirst({
+    where: eq(verificationTokens.identifier, email),
   });
+
+  if (existingToken) {
+    // Update existing token
+    await db
+      .update(verificationTokens)
+      .set({ token, expires })
+      .where(eq(verificationTokens.identifier, email));
+  } else {
+    // Create new token
+    await db.insert(verificationTokens).values({
+      identifier: email,
+      token,
+      expires,
+    });
+  }
 
   return token;
 }
@@ -38,28 +47,98 @@ export async function createVerificationToken(
 /**
  * Verify a token and return the identifier if valid
  */
-export async function verifyToken(token: string): Promise<string | null> {
+export async function verifyToken(
+  email: string,
+  token: string,
+): Promise<boolean> {
   const verificationToken = await db.query.verificationTokens.findFirst({
-    where: eq(verificationTokens.token, token),
+    where: and(
+      eq(verificationTokens.identifier, email),
+      eq(verificationTokens.token, token),
+      gt(verificationTokens.expires, new Date()),
+    ),
   });
 
-  if (!verificationToken) {
-    return null;
-  }
+  if (!verificationToken) return false;
 
-  // Check if token has expired
-  if (verificationToken.expires < new Date()) {
-    // Remove expired token
-    await db
-      .delete(verificationTokens)
-      .where(eq(verificationTokens.token, token));
-    return null;
-  }
-
-  // Delete the token so it can't be used again
+  // Delete the used token
   await db
     .delete(verificationTokens)
-    .where(eq(verificationTokens.token, token));
+    .where(
+      and(
+        eq(verificationTokens.identifier, email),
+        eq(verificationTokens.token, token),
+      ),
+    );
 
-  return verificationToken.identifier;
+  return true;
+}
+
+/**
+ * Create a password reset token for a user
+ */
+export async function createPasswordResetToken(
+  email: string,
+  expiresInHours = 1,
+): Promise<string> {
+  // Generate a random token
+  const token = generateToken();
+  const expires = new Date(Date.now() + expiresInHours * 60 * 60 * 1000);
+
+  // Use "pwd-reset:" prefix to differentiate from email verification tokens
+  const identifier = `pwd-reset:${email}`;
+
+  // Check if a token already exists for this identifier
+  const existingToken = await db.query.verificationTokens.findFirst({
+    where: eq(verificationTokens.identifier, identifier),
+  });
+
+  if (existingToken) {
+    // Update existing token
+    await db
+      .update(verificationTokens)
+      .set({ token, expires })
+      .where(eq(verificationTokens.identifier, identifier));
+  } else {
+    // Create new token
+    await db.insert(verificationTokens).values({
+      identifier,
+      token,
+      expires,
+    });
+  }
+
+  return token;
+}
+
+/**
+ * Verify a password reset token and return the identifier if valid
+ */
+export async function verifyPasswordResetToken(
+  email: string,
+  token: string,
+): Promise<boolean> {
+  const identifier = `pwd-reset:${email}`;
+
+  const resetToken = await db.query.verificationTokens.findFirst({
+    where: and(
+      eq(verificationTokens.identifier, identifier),
+      eq(verificationTokens.token, token),
+      gt(verificationTokens.expires, new Date()),
+    ),
+  });
+
+  if (!resetToken) return false;
+
+  // Delete the used token
+  await db
+    .delete(verificationTokens)
+    .where(
+      and(
+        eq(verificationTokens.identifier, identifier),
+        eq(verificationTokens.token, token),
+      ),
+    );
+
+  return true;
 }

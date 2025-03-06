@@ -185,7 +185,7 @@ export function UserItems() {
           </ul>
         ) : (
           <div className="p-4 text-center text-gray-500">
-            <p>You haven't listed any items yet.</p>
+            <p>You haven&apos;t listed any items yet.</p>
             <button
               onClick={() => setFormOpen(true)}
               className="mt-2 text-sm font-medium text-indigo-600 hover:text-indigo-500"
