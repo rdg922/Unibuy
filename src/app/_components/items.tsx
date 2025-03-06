@@ -1,7 +1,10 @@
 "use client";
-
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import { UploadButton } from "~/utils/uploadthing";
+import { twMerge } from "tailwind-merge";
+
+import Image from "next/image";
 
 export function UserItems() {
   const { data: items = [] } = api.item.getUserItems.useQuery();
@@ -9,12 +12,16 @@ export function UserItems() {
 
   // State for new item form
   const [formOpen, setFormOpen] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<
+    "idle" | "uploading" | "success" | "error"
+  >("idle");
   const [itemData, setItemData] = useState({
     name: "",
     description: "",
     price: 0,
     condition: "used",
     category: "textbooks",
+    imageUrl: "",
   });
 
   const createItem = api.item.create.useMutation({
@@ -26,7 +33,9 @@ export function UserItems() {
         price: 0,
         condition: "used",
         category: "textbooks",
+        imageUrl: "",
       });
+      setUploadStatus("idle");
       setFormOpen(false);
     },
   });
@@ -140,10 +149,87 @@ export function UserItems() {
                 </select>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-700">
+                Item Image
+              </label>
+              {itemData.imageUrl ? (
+                <div className="relative mt-1 h-40 w-full overflow-hidden rounded-md border border-gray-300">
+                  <Image
+                    src={itemData.imageUrl}
+                    alt="Item preview"
+                    fill
+                    className="object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setItemData((prev) => ({ ...prev, imageUrl: "" }))
+                    }
+                    className="absolute right-2 top-2 rounded-full bg-gray-800 bg-opacity-70 p-1 text-white hover:bg-opacity-100"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-1 rounded-md border border-dashed border-gray-300 p-4">
+                  <UploadButton
+                    endpoint="imageUploader"
+                    onUploadBegin={() => setUploadStatus("uploading")}
+                    onClientUploadComplete={(res) => {
+                      if (res[0]?.ufsUrl) {
+                        setItemData((prev) => ({
+                          ...prev,
+                          imageUrl: res[0].ufsUrl,
+                        }));
+                        setUploadStatus("success");
+                      }
+                    }}
+                    onUploadError={(error: Error) => {
+                      console.error("Upload error:", error);
+                      setUploadStatus("error");
+                    }}
+                    className="ut-button:bg-indigo-600"
+                    content={{
+                      button({ ready }) {
+                        if (uploadStatus === "uploading") return "Uploading...";
+                        if (!ready) return "Loading...";
+                        return "Upload Image";
+                      },
+                      allowedContent({ ready, isUploading }) {
+                        if (!ready || isUploading) return "";
+                        return "JPEG, PNG or GIF up to 4MB";
+                      },
+                    }}
+                    config={{ cn: twMerge }}
+                  />
+                  {uploadStatus === "error" && (
+                    <p className="mt-2 text-xs text-red-600">
+                      Upload failed. Please try again.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <button
               type="submit"
               className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-400"
-              disabled={createItem.isPending}
+              disabled={createItem.isPending || !itemData.imageUrl}
             >
               {createItem.isPending ? "Adding Item..." : "Add Item"}
             </button>
