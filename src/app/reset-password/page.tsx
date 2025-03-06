@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { api } from "~/trpc/react";
 
 export default function ResetPasswordPage() {
   const searchParams = useSearchParams();
@@ -10,13 +11,26 @@ export default function ResetPasswordPage() {
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState("");
 
   // Get token and email from URL parameters
   const token = searchParams.get("token");
   const email = searchParams.get("email");
+
+  const resetPasswordMutation = api.auth.resetPassword.useMutation({
+    onSuccess: () => {
+      setIsSuccess(true);
+      // Auto-redirect to login page after 3 seconds
+      setTimeout(() => {
+        router.push("/login");
+      }, 3000);
+    },
+    onError: (error) => {
+      setError(error.message);
+    },
+  });
+
+  const [isSuccess, setIsSuccess] = useState(false);
 
   // Validate the URL parameters
   useEffect(() => {
@@ -39,37 +53,21 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    if (!token || !email) {
+      setError("Missing required parameters");
+      return;
+    }
+
     setError("");
-    setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/reset-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          token,
-          password,
-        }),
+      resetPasswordMutation.mutate({
+        email,
+        token,
+        password,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to reset password");
-      }
-
-      setIsSuccess(true);
-      // Auto-redirect to login page after 3 seconds
-      setTimeout(() => {
-        router.push("/login");
-      }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -175,10 +173,12 @@ export default function ResetPasswordPage() {
                 <div>
                   <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={resetPasswordMutation.isLoading}
                     className="group relative flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:bg-indigo-400"
                   >
-                    {isSubmitting ? "Resetting..." : "Reset Password"}
+                    {resetPasswordMutation.isLoading
+                      ? "Resetting..."
+                      : "Reset Password"}
                   </button>
                 </div>
               </>

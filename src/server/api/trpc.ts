@@ -10,6 +10,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import { headers } from "next/headers";
 
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
@@ -32,7 +33,21 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
   return {
     db,
     session,
-    ...opts,
+    headers: {
+      ...Object.fromEntries(opts.headers.entries()),
+      origin: opts.headers.get("origin"),
+    },
+  };
+};
+
+// Exported for client use
+export const createCallerContext = async () => {
+  return {
+    db,
+    session: await auth(),
+    headers: {
+      origin: headers().get("origin"),
+    },
   };
 };
 

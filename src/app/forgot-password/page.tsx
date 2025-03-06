@@ -2,37 +2,31 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { api } from "~/trpc/react";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
+
+  const forgotPasswordMutation = api.auth.forgotPassword.useMutation({
+    onSuccess: () => {
+      setIsSubmitted(true);
+    },
+    onError: (error) => {
+      setError(error.message);
+    },
+  });
+
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/forgot-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Something went wrong");
-      }
-
-      setIsSubmitted(true);
+      forgotPasswordMutation.mutate({ email });
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -97,10 +91,12 @@ export default function ForgotPasswordPage() {
             <div>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={forgotPasswordMutation.isLoading}
                 className="group relative flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:bg-indigo-400"
               >
-                {isSubmitting ? "Sending..." : "Send reset link"}
+                {forgotPasswordMutation.isLoading
+                  ? "Sending..."
+                  : "Send reset link"}
               </button>
             </div>
 

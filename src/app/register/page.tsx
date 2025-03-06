@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { api } from "~/trpc/react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -10,34 +11,25 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+
+  const registerMutation = api.auth.register.useMutation({
+    onSuccess: () => {
+      // Redirect to login page on successful registration
+      router.push("/login?registered=true");
+    },
+    onError: (error) => {
+      setError(error.message);
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError("");
 
     try {
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to register");
-      }
-
-      // Redirect to login page on successful registration
-      router.push("/login?registered=true");
+      registerMutation.mutate({ name, email, password });
     } catch (error) {
       setError(error instanceof Error ? error.message : "An error occurred");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -110,10 +102,10 @@ export default function RegisterPage() {
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={registerMutation.isLoading}
               className="group relative flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:bg-indigo-400"
             >
-              {isLoading ? "Creating account..." : "Sign up"}
+              {registerMutation.isLoading ? "Creating account..." : "Sign up"}
             </button>
           </div>
 

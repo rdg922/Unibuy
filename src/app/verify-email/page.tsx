@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { api } from "~/trpc/react";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -11,6 +12,24 @@ export default function VerifyEmailPage() {
     "loading",
   );
   const [message, setMessage] = useState("");
+
+  const verifyEmailMutation = api.auth.verifyEmail.useMutation({
+    onSuccess: () => {
+      setStatus("success");
+      setMessage("Your email has been verified successfully!");
+
+      // Redirect to login page after 3 seconds
+      setTimeout(() => {
+        router.push("/login");
+      }, 3000);
+    },
+    onError: (error) => {
+      setStatus("error");
+      setMessage(
+        error.message || "Failed to verify email. The link may have expired.",
+      );
+    },
+  });
 
   useEffect(() => {
     const verifyEmail = async () => {
@@ -26,30 +45,7 @@ export default function VerifyEmailPage() {
       }
 
       try {
-        const response = await fetch("/api/verify-email", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ token, email }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          setStatus("success");
-          setMessage("Your email has been verified successfully!");
-
-          // Redirect to login page after 3 seconds
-          setTimeout(() => {
-            router.push("/login");
-          }, 3000);
-        } else {
-          setStatus("error");
-          setMessage(
-            data.error || "Failed to verify email. The link may have expired.",
-          );
-        }
+        verifyEmailMutation.mutate({ token, email });
       } catch (error) {
         setStatus("error");
         setMessage("An error occurred during verification. Please try again.");
@@ -57,7 +53,7 @@ export default function VerifyEmailPage() {
     };
 
     verifyEmail();
-  }, [searchParams, router]);
+  }, [searchParams]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-2">
