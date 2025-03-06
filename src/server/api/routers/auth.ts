@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { users } from "~/server/db/schema";
-import { hashPassword } from "~/server/auth/password";
+import { hashPassword, verifyPassword } from "~/server/auth/password";
 import {
   createVerificationToken,
   verifyToken,
@@ -12,6 +12,7 @@ import {
   verifyPasswordResetToken,
 } from "~/server/auth/token";
 import { emailService } from "~/server/email/service";
+import { signIn } from "~/server/auth";
 
 const registerSchema = z.object({
   name: z.string().min(2).max(100),
@@ -197,6 +198,119 @@ export const authRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to reset password",
+        });
+      }
+    }),
+
+  login: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        password: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { email, password } = input;
+
+        // First check if user exists
+        const user = await ctx.db.query.users.findFirst({
+          where: eq(users.email, email),
+        });
+
+        if (!user) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password",
+          });
+        }
+
+        // Check if email is verified
+        if (!user.emailVerified) {
+          // Generate a new verification token
+          const verificationToken = await createVerificationToken(email);
+
+          // Send a new verification email
+          const baseUrl = ctx.headers?.origin || "http://localhost:3000";
+          await emailService.sendVerificationEmail(
+            email,
+            verificationToken,
+            baseUrl,
+          );
+
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "EMAIL_NOT_VERIFIED",
+          });
+        }
+
+        // Verify password manually
+        const isValidPassword = await verifyPassword(password, user.password);
+
+        if (!isValidPassword) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password",
+          });
+        }
+
+        // Return success response with user info (excluding sensitive data)
+        return {
+          success: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+          },
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+
+        console.error("Login error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to login",
+        });
+      }
+    }),
+
+  resendVerification: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { email } = input;
+
+        // Check if user exists
+        const user = await ctx.db.query.users.findFirst({
+          where: eq(users.email, email),
+        });
+
+        // Don't reveal if user exists or not
+        if (!user || user.emailVerified) {
+          return { success: true };
+        }
+
+        // Generate a new verification token
+        const verificationToken = await createVerificationToken(email);
+
+        // Send verification email
+        const baseUrl = ctx.headers?.origin || "http://localhost:3000";
+        await emailService.sendVerificationEmail(
+          email,
+          verificationToken,
+          baseUrl,
+        );
+
+        return { success: true };
+      } catch (error) {
+        console.error("Resend verification error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to resend verification email",
         });
       }
     }),

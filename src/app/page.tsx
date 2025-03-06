@@ -5,11 +5,10 @@ import { auth } from "~/server/auth";
 import { api, HydrateClient } from "~/trpc/server";
 
 export default async function Home() {
-  const hello = await api.post.hello({ text: "from tRPC" });
   const session = await auth();
 
   // Prefetch marketplace items
-  await api.post.getAllItems.prefetch();
+  await api.item.getAllItems.prefetch();
 
   return (
     <HydrateClient>

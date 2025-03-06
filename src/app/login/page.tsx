@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { api } from "~/trpc/react";
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,67 +12,87 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isResendingVerification, setIsResendingVerification] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showVerificationNotice, setShowVerificationNotice] = useState(false);
+  const [justRegistered, setJustRegistered] = useState(false);
 
-  // Show message if redirected after registration
-  const registered = searchParams.get("registered") === "true";
+  // Check for registered=true query param
+  useEffect(() => {
+    const registered = searchParams.get("registered");
+    if (registered === "true") {
+      setJustRegistered(true);
+    }
+  }, [searchParams]);
+
+  const loginMutation = api.auth.login.useMutation({
+    onSuccess: async () => {
+      try {
+        // After tRPC validation succeeds, use NextAuth to create the session
+        const result = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        });
+
+        if (result?.error) {
+          setError("Authentication failed. Please try again.");
+          setIsLoading(false);
+        } else {
+          // Redirect to homepage on successful login
+          router.push("/");
+          router.refresh();
+        }
+      } catch (err) {
+        setError("Failed to sign in");
+        setIsLoading(false);
+      }
+    },
+    onError: (error) => {
+      if (error.message === "EMAIL_NOT_VERIFIED") {
+        setShowVerificationNotice(true);
+        setError("");
+      } else {
+        setError(error.message || "Failed to login");
+      }
+      setIsLoading(false);
+    },
+  });
+
+  const resendVerificationMutation = api.auth.resendVerification.useMutation({
+    onSuccess: () => {
+      // Just show a message that email has been sent, regardless of whether user exists
+      alert(
+        "If an account exists with that email, a verification link has been sent.",
+      );
+    },
+    onError: () => {
+      // Generic error to avoid leaking information
+      alert(
+        "There was a problem sending the verification email. Please try again later.",
+      );
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setShowVerificationNotice(false);
+    setIsLoading(true);
 
     try {
-      const result = await signIn("credentials", {
-        redirect: false,
-        email,
-        password,
-      });
-
-      if (result?.error) {
-        if (result.error.includes("Email not verified")) {
-          setError("Please verify your email before signing in.");
-        } else {
-          setError("Invalid email or password");
-        }
-      } else {
-        router.push("/");
-        router.refresh();
-      }
-    } catch (error) {
-      setError("Something went wrong");
+      loginMutation.mutate({ email, password });
+    } catch (err) {
+      setError("An unexpected error occurred");
+      setIsLoading(false);
     }
   };
 
-  const handleResendVerification = async () => {
-    if (!email) {
-      setError("Please enter your email address");
-      return;
-    }
-
-    setIsResendingVerification(true);
-    try {
-      const response = await fetch("/api/resend-verification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      if (response.ok) {
-        setResendSuccess(true);
-        setError("");
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to resend verification email");
-      }
-    } catch (error) {
-      setError("Something went wrong");
-    } finally {
-      setIsResendingVerification(false);
-    }
+  const handleResendVerification = () => {
+    resendVerificationMutation.mutate({ email });
   };
+
+  // Determine if we're in a loading state
+  const isLoadingState = isLoading || loginMutation.isLoading;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-2">
@@ -82,19 +103,11 @@ export default function LoginPage() {
           </h2>
         </div>
 
-        {registered && (
+        {justRegistered && (
           <div className="rounded-md bg-green-50 p-4">
             <p className="text-sm text-green-700">
-              Registration successful! Please check your email to verify your
-              account before signing in.
-            </p>
-          </div>
-        )}
-
-        {resendSuccess && (
-          <div className="rounded-md bg-green-50 p-4">
-            <p className="text-sm text-green-700">
-              Verification email sent. Please check your inbox.
+              Registration successful! Please check your email for a
+              verification link before logging in.
             </p>
           </div>
         )}
@@ -102,26 +115,33 @@ export default function LoginPage() {
         {error && (
           <div className="rounded-md bg-red-50 p-4">
             <p className="text-sm text-red-700">{error}</p>
-            {error.includes("verify your email") && (
-              <button
-                type="button"
-                onClick={handleResendVerification}
-                disabled={isResendingVerification}
-                className="mt-2 text-sm font-medium text-red-700 hover:text-red-600"
-              >
-                {isResendingVerification
-                  ? "Sending..."
-                  : "Resend verification email"}
-              </button>
-            )}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        {showVerificationNotice && (
+          <div className="rounded-md bg-yellow-50 p-4">
+            <p className="text-sm text-yellow-700">
+              Your email has not been verified. Please check your inbox for a
+              verification link.
+            </p>
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={resendVerificationMutation.isLoading}
+              className="mt-2 text-sm font-medium text-yellow-700 underline hover:text-yellow-600"
+            >
+              {resendVerificationMutation.isLoading
+                ? "Sending..."
+                : "Resend verification email"}
+            </button>
+          </div>
+        )}
+
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="-space-y-px rounded-md shadow-sm">
             <div>
               <label htmlFor="email" className="sr-only">
-                Email
+                Email address
               </label>
               <input
                 id="email"
@@ -153,7 +173,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="mt-5 flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <div className="text-sm">
               <Link
                 href="/forgot-password"
@@ -167,20 +187,21 @@ export default function LoginPage() {
           <div>
             <button
               type="submit"
-              className="group relative flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              disabled={isLoadingState}
+              className="group relative flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:bg-indigo-400"
             >
-              Sign in
+              {isLoadingState ? "Signing in..." : "Sign in"}
             </button>
           </div>
 
-          <div className="mt-4 text-center">
+          <div className="text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{" "}
               <Link
                 href="/register"
                 className="font-medium text-indigo-600 hover:text-indigo-500"
               >
-                Register
+                Sign up
               </Link>
             </p>
           </div>

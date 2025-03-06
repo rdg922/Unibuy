@@ -6,9 +6,9 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import { posts, users } from "~/server/db/schema";
+import { items } from "~/server/db/schema";
 
-export const postRouter = createTRPCRouter({
+export const itemRouter = createTRPCRouter({
   hello: publicProcedure
     .input(z.object({ text: z.string() }))
     .query(({ input }) => {
@@ -28,43 +28,43 @@ export const postRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await ctx.db.insert(posts).values({
+      await ctx.db.insert(items).values({
         name: input.name,
-        description: input.description || "",
-        price: input.price || 0,
-        condition: input.condition || "used",
-        category: input.category || "other",
+        description: input.description ?? "",
+        price: input.price ?? 0,
+        condition: input.condition ?? "used",
+        category: input.category ?? "other",
         createdById: ctx.session.user.id,
       });
     }),
 
   getLatest: protectedProcedure.query(async ({ ctx }) => {
-    const post = await ctx.db.query.posts.findFirst({
-      orderBy: (posts, { desc }) => [desc(posts.createdAt)],
-      where: eq(posts.createdById, ctx.session.user.id),
+    const item = await ctx.db.query.items.findFirst({
+      orderBy: (items, { desc }) => [desc(items.createdAt)],
+      where: eq(items.createdById, ctx.session.user.id),
     });
 
-    return post ?? null;
+    return item ?? null;
   }),
 
   getAll: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.query.posts.findMany({
-      orderBy: [desc(posts.createdAt)],
+    return ctx.db.query.items.findMany({
+      orderBy: [desc(items.createdAt)],
       limit: 100,
     });
   }),
 
   getUserItems: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.query.posts.findMany({
-      orderBy: [desc(posts.createdAt)],
-      where: eq(posts.createdById, ctx.session.user.id),
+    return ctx.db.query.items.findMany({
+      orderBy: [desc(items.createdAt)],
+      where: eq(items.createdById, ctx.session.user.id),
       limit: 100,
     });
   }),
 
   getAllItems: publicProcedure.query(async ({ ctx }) => {
-    const items = await ctx.db.query.posts.findMany({
-      orderBy: [desc(posts.createdAt)],
+    return await ctx.db.query.items.findMany({
+      orderBy: [desc(items.createdAt)],
       with: {
         user: {
           columns: {
@@ -75,8 +75,6 @@ export const postRouter = createTRPCRouter({
       },
       limit: 100,
     });
-
-    return items;
   }),
 
   getSecretMessage: protectedProcedure.query(() => {

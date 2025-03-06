@@ -18,8 +18,8 @@ import { type AdapterAccount } from "next-auth/adapters";
  */
 export const createTable = sqliteTableCreator((name) => `swe-shop_${name}`);
 
-export const posts = createTable(
-  "post",
+export const items = createTable(
+  "item",
   {
     id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
     name: text("name", { length: 256 }),
@@ -45,9 +45,9 @@ export const posts = createTable(
   }),
 );
 
-export const postsRelations = relations(posts, ({ one }) => ({
+export const itemsRelations = relations(items, ({ one }) => ({
   user: one(users, {
-    fields: [posts.createdById],
+    fields: [items.createdById],
     references: [users.id],
   }),
 }));
@@ -68,7 +68,7 @@ export const users = createTable("user", {
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
-  posts: many(posts),
+  items: many(items),
 }));
 
 export const accounts = createTable(

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 
 export function Marketplace() {
-  const { data: items = [], isLoading } = api.post.getAllItems.useQuery();
+  const { data: items = [], isLoading } = api.item.getAllItems.useQuery();
   const [filter, setFilter] = useState({
     category: "all",
     condition: "all",

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 
 export function UserItems() {
-  const { data: items = [] } = api.post.getUserItems.useQuery();
+  const { data: items = [] } = api.item.getUserItems.useQuery();
   const utils = api.useUtils();
 
   // State for new item form
@@ -17,9 +17,9 @@ export function UserItems() {
     category: "textbooks",
   });
 
-  const createItem = api.post.create.useMutation({
+  const createItem = api.item.create.useMutation({
     onSuccess: async () => {
-      await utils.post.invalidate();
+      await utils.item.invalidate();
       setItemData({
         name: "",
         description: "",
