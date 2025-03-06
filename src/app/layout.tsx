@@ -24,7 +24,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <TRPCReactProvider cookies={cookies()}>
+        <TRPCReactProvider>
           <Navbar session={session} />
           {children}
         </TRPCReactProvider>

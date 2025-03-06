@@ -40,17 +40,6 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
   };
 };
 
-// Exported for client use
-export const createCallerContext = async () => {
-  return {
-    db,
-    session: await auth(),
-    headers: {
-      origin: headers().get("origin"),
-    },
-  };
-};
-
 /**
  * 2. INITIALIZATION
  *

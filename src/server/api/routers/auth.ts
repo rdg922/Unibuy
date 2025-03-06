@@ -12,7 +12,6 @@ import {
   verifyPasswordResetToken,
 } from "~/server/auth/token";
 import { emailService } from "~/server/email/service";
-import { signIn } from "~/server/auth";
 
 const registerSchema = z.object({
   name: z.string().min(2).max(100),
@@ -54,7 +53,7 @@ export const authRouter = createTRPCRouter({
         const verificationToken = await createVerificationToken(email);
 
         // Send verification email
-        const baseUrl = ctx.headers?.origin || "http://localhost:3000";
+        const baseUrl = ctx.headers?.origin ?? "http://localhost:3000";
         await emailService.sendVerificationEmail(
           email,
           verificationToken,
@@ -136,7 +135,7 @@ export const authRouter = createTRPCRouter({
         const resetToken = await createPasswordResetToken(email);
 
         // Send password reset email
-        const baseUrl = ctx.headers?.origin || "http://localhost:3000";
+        const baseUrl = ctx.headers?.origin ?? "http://localhost:3000";
         await emailService.sendPasswordResetEmail(email, resetToken, baseUrl);
 
         return { success: true };
@@ -231,7 +230,7 @@ export const authRouter = createTRPCRouter({
           const verificationToken = await createVerificationToken(email);
 
           // Send a new verification email
-          const baseUrl = ctx.headers?.origin || "http://localhost:3000";
+          const baseUrl = ctx.headers?.origin ?? "http://localhost:3000";
           await emailService.sendVerificationEmail(
             email,
             verificationToken,
@@ -245,7 +244,7 @@ export const authRouter = createTRPCRouter({
         }
 
         // Verify password manually
-        const isValidPassword = await verifyPassword(password, user.password);
+        const isValidPassword = await verifyPassword(password, user.password!);
 
         if (!isValidPassword) {
           throw new TRPCError({
@@ -298,7 +297,7 @@ export const authRouter = createTRPCRouter({
         const verificationToken = await createVerificationToken(email);
 
         // Send verification email
-        const baseUrl = ctx.headers?.origin || "http://localhost:3000";
+        const baseUrl = ctx.headers?.origin ?? "http://localhost:3000";
         await emailService.sendVerificationEmail(
           email,
           verificationToken,
