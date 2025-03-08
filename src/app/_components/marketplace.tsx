@@ -5,18 +5,12 @@ import { api } from "~/trpc/react";
 
 export function Marketplace() {
   const { data: items = [], isLoading } = api.item.getAllItems.useQuery();
+
   const [filter, setFilter] = useState({
     category: "all",
     condition: "all",
   });
-
-  // Filter items based on selected filters
-  const filteredItems = items.filter((item) => {
-    return (
-      (filter.category === "all" || item.category === filter.category) &&
-      (filter.condition === "all" || item.condition === filter.condition)
-    );
-  });
+  const [sort, setSort] = useState("newest");
 
   const categories = [
     { value: "all", label: "All Categories" },
@@ -36,6 +30,39 @@ export function Marketplace() {
     { value: "fair", label: "Fair" },
     { value: "poor", label: "Poor" },
   ];
+
+  const sortOptions = [
+    {
+      value: "newest",
+      label: "Newest",
+      sortFunction: (a: any, b: any) => b.createdAt - a.createdAt,
+    },
+    {
+      value: "oldest",
+      label: "Oldest",
+      sortFunction: (a: any, b: any) => a.createdAt - b.createdAt,
+    },
+    {
+      value: "price-asc",
+      label: "Price: Low to High",
+      sortFunction: (a: any, b: any) => a.price - b.price,
+    },
+    {
+      value: "price-desc",
+      label: "Price: High to Low",
+      sortFunction: (a: any, b: any) => b.price - a.price,
+    },
+  ];
+
+  // Filter items based on selected filters and sort by selected sort option
+  const filteredItems = items
+    .filter((item) => {
+      return (
+        (filter.category === "all" || item.category === filter.category) &&
+        (filter.condition === "all" || item.condition === filter.condition)
+      );
+    })
+    .sort(sortOptions.find((option) => option.value === sort)?.sortFunction);
 
   if (isLoading) {
     return (
@@ -90,6 +117,26 @@ export function Marketplace() {
             {conditions.map((condition) => (
               <option key={condition.value} value={condition.value}>
                 {condition.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label
+            htmlFor="sort"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Sort by
+          </label>
+          <select
+            id="sort"
+            className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+          >
+            {sortOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
