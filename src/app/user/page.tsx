@@ -4,6 +4,7 @@ import Link from "next/link";
 import { UserItems } from "~/app/_components/items";
 import { auth } from "~/server/auth";
 import { HydrateClient } from "~/trpc/server";
+import { EditableProfileSection } from "~/app/_components/EditableProfileSection";
 
 export default async function UserHomePage() {
   const session = await auth();
@@ -40,29 +41,7 @@ export default async function UserHomePage() {
         <div className="mx-auto mt-6 max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="overflow-hidden rounded-lg bg-white shadow">
             <div className="px-4 py-5 sm:p-6">
-              <div className="flex items-center space-x-5">
-                <div className="flex-shrink-0">
-                  {session.user.image ? (
-                    <img
-                      className="h-16 w-16 rounded-full"
-                      src={session.user.image}
-                      alt="Profile"
-                    />
-                  ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100 text-xl font-medium text-indigo-700">
-                      {session.user.name?.charAt(0) ??
-                        session.user.email?.charAt(0) ??
-                        "U"}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    {session.user.name}
-                  </h2>
-                  <p className="text-sm text-gray-500">{session.user.email}</p>
-                </div>
-              </div>
+              <EditableProfileSection user={session.user} />
             </div>
           </div>
 
