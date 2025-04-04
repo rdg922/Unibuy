@@ -4,8 +4,8 @@ import Link from "next/link";
 import { db } from "~/server/db";
 import { items } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+import { auth } from "~/server/auth";
 
-// In Next.js App Router, we need to handle params properly
 export default async function ItemPage({ params }: { params: { id: string } }) {
   try {
     // Convert id to number
@@ -14,6 +14,9 @@ export default async function ItemPage({ params }: { params: { id: string } }) {
     if (isNaN(itemId)) {
       return notFound();
     }
+
+    // Get session to check if user is logged in
+    const session = await auth();
 
     // Use direct DB query instead of tRPC in server component
     const item = await db.query.items.findFirst({
@@ -29,6 +32,10 @@ export default async function ItemPage({ params }: { params: { id: string } }) {
 
     // Format the date
     const postedDate = new Date(item.createdAt).toLocaleDateString();
+
+    // Check if the logged in user is the item owner
+    const isOwner = session?.user?.id === item.createdById;
+    const isAuthenticated = !!session?.user;
 
     return (
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -144,12 +151,30 @@ export default async function ItemPage({ params }: { params: { id: string } }) {
                     Interested?
                   </h2>
                   <div className="mt-2">
-                    <Link
-                      href={`/contact?itemId=${item.id}&sellerId=${item.createdById}`}
-                      className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                    >
-                      Contact Seller
-                    </Link>
+                    {isOwner ? (
+                      <p className="text-sm text-gray-500">
+                        This is your listing
+                      </p>
+                    ) : isAuthenticated ? (
+                      <Link
+                        href={`/contact?itemId=${item.id}&sellerId=${item.createdById}`}
+                        className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                      >
+                        Contact Seller
+                      </Link>
+                    ) : (
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">
+                          You need to be logged in to contact the seller.
+                        </p>
+                        <Link
+                          href="/login"
+                          className="mt-2 inline-block text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                        >
+                          Sign in to continue
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { api } from "~/trpc/react";
 
 export default function ContactPage() {
   const searchParams = useSearchParams();
@@ -12,24 +13,35 @@ export default function ContactPage() {
 
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [isSent, setIsSent] = useState(false);
+
+  const startConversation = api.chat.startConversation.useMutation({
+    onSuccess: () => {
+      router.push("/");
+      // This will trigger the chat drawer to open from localStorage
+      localStorage.setItem("openChat", "true");
+      localStorage.setItem("chatJustStarted", "true");
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!itemId || !sellerId || !message.trim()) return;
+
     setIsSending(true);
 
-    // Simulate sending message
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // In a real app, you would send this message to your backend
-    console.log("Message sent:", {
-      itemId,
-      sellerId,
-      message,
-    });
-
-    setIsSending(false);
-    setIsSent(true);
+    try {
+      await startConversation.mutateAsync({
+        sellerId,
+        itemId: parseInt(itemId),
+        initialMessage: message.trim(),
+      });
+    } catch (error) {
+      console.error("Error starting conversation:", error);
+      alert("Failed to send message. Please try again.");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   if (!itemId || !sellerId) {
@@ -48,50 +60,6 @@ export default function ContactPage() {
           >
             Return to Marketplace
           </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (isSent) {
-    return (
-      <div className="mx-auto max-w-lg px-4 py-12 sm:px-6 lg:px-8">
-        <div className="rounded-md bg-green-50 p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-green-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-green-800">
-                Message sent successfully
-              </h3>
-              <div className="mt-2 text-sm text-green-700">
-                <p>
-                  Your message has been sent to the seller. They will contact
-                  you soon.
-                </p>
-              </div>
-              <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={() => router.push("/")}
-                  className="rounded-md bg-green-50 px-2 py-1.5 text-sm font-medium text-green-800 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-green-50"
-                >
-                  Return to Marketplace
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     );

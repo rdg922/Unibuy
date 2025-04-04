@@ -1,5 +1,6 @@
 import { itemRouter } from "~/server/api/routers/item";
 import { authRouter } from "~/server/api/routers/auth";
+import { chatRouter } from "~/server/api/routers/chat";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -10,6 +11,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 export const appRouter = createTRPCRouter({
   item: itemRouter,
   auth: authRouter,
+  chat: chatRouter,
 });
 
 // export type definition of API
