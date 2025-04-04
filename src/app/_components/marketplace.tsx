@@ -5,12 +5,21 @@ import { api } from "~/trpc/react";
 import Image from "next/image";
 import Link from "next/link";
 
+type SortOption =
+  | "newest"
+  | "oldest"
+  | "price-low"
+  | "price-high"
+  | "name-asc"
+  | "name-desc";
+
 export function Marketplace() {
   const { data: items = [] } = api.item.getAllItems.useQuery();
   const [filter, setFilter] = useState({
     category: "all",
     condition: "all",
   });
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
 
   // Filter items based on category and condition
   const filteredItems = items.filter((item) => {
@@ -20,6 +29,30 @@ export function Marketplace() {
     );
   });
 
+  // Sort items based on selected sort option
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    switch (sortBy) {
+      case "newest":
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      case "oldest":
+        return (
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+      case "price-low":
+        return (a.price ?? 0) - (b.price ?? 0);
+      case "price-high":
+        return (b.price ?? 0) - (a.price ?? 0);
+      case "name-asc":
+        return (a.name ?? "").localeCompare(b.name ?? "");
+      case "name-desc":
+        return (b.name ?? "").localeCompare(a.name ?? "");
+      default:
+        return 0;
+    }
+  });
+
   const handleFilterChange = (
     e: React.ChangeEvent<HTMLSelectElement>,
     type: "category" | "condition",
@@ -27,13 +60,39 @@ export function Marketplace() {
     setFilter((prev) => ({ ...prev, [type]: e.target.value }));
   };
 
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSortBy(e.target.value as SortOption);
+  };
+
   return (
     <div>
-      {/* Filtering controls */}
+      {/* Filtering and sorting controls */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md bg-white p-4 shadow-sm">
         <h2 className="text-xl font-semibold text-gray-900">Marketplace</h2>
 
         <div className="flex flex-wrap gap-3">
+          <div>
+            <label
+              htmlFor="sort-by"
+              className="mr-2 text-sm font-medium text-gray-700"
+            >
+              Sort by:
+            </label>
+            <select
+              id="sort-by"
+              value={sortBy}
+              onChange={handleSortChange}
+              className="rounded-md border-gray-300 py-1 pl-2 pr-8 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="name-asc">Name: A-Z</option>
+              <option value="name-desc">Name: Z-A</option>
+            </select>
+          </div>
+
           <div>
             <label
               htmlFor="category-filter"
@@ -81,9 +140,9 @@ export function Marketplace() {
       </div>
 
       {/* Items grid */}
-      {filteredItems.length > 0 ? (
+      {sortedItems.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {filteredItems.map((item) => (
+          {sortedItems.map((item) => (
             <div
               key={item.id}
               className="overflow-hidden rounded-lg bg-white shadow-sm transition-shadow hover:shadow-md"
