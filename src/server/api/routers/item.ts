@@ -25,6 +25,7 @@ export const itemRouter = createTRPCRouter({
         price: z.number().min(0).optional(),
         condition: z.string().optional(),
         category: z.string().optional(),
+        imageUrl: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -35,6 +36,7 @@ export const itemRouter = createTRPCRouter({
         condition: input.condition ?? "used",
         category: input.category ?? "other",
         createdById: ctx.session.user.id,
+        imageUrl: input.imageUrl,
       });
     }),
 
