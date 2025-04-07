@@ -78,12 +78,12 @@ export function UserItems() {
 
   const handleEdit = (item: typeof items[0]) => {
     setItemData({
-      name: item.name,
-      description: item.description,
-      price: item.price,
-      condition: item.condition,
-      category: item.category,
-      imageUrl: item.imageUrl || "",
+      name: item.name ?? "",
+      description: item.description ?? "",
+      price: item.price ?? 0,
+      condition: item.condition ?? "used",
+      category: item.category ?? "textbooks",
+      imageUrl: item.imageUrl ?? "",
     });
     setEditItemId(item.id);
     setIsEditing(true);
@@ -230,7 +230,7 @@ export function UserItems() {
                       if (res[0]?.ufsUrl) {
                         setItemData((prev) => ({
                           ...prev,
-                          imageUrl: res[0].ufsUrl,
+                          imageUrl: res[0]?.ufsUrl ?? "",
                         }));
                         setUploadStatus("success");
                       }
