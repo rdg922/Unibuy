@@ -12,6 +12,8 @@ export function UserItems() {
 
   // State for new item form
   const [formOpen, setFormOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editItemId, setEditItemId] = useState<number | null>(null);
   const [uploadStatus, setUploadStatus] = useState<
     "idle" | "uploading" | "success" | "error"
   >("idle");
@@ -27,18 +29,31 @@ export function UserItems() {
   const createItem = api.item.create.useMutation({
     onSuccess: async () => {
       await utils.item.invalidate();
-      setItemData({
-        name: "",
-        description: "",
-        price: 0,
-        condition: "used",
-        category: "textbooks",
-        imageUrl: "",
-      });
-      setUploadStatus("idle");
-      setFormOpen(false);
+      resetForm();
     },
   });
+
+  const editItem = api.item.edit.useMutation({
+    onSuccess: async () => {
+      await utils.item.invalidate();
+      resetForm();
+    },
+  });
+
+  const resetForm = () => {
+    setItemData({
+      name: "",
+      description: "",
+      price: 0,
+      condition: "used",
+      category: "textbooks",
+      imageUrl: "",
+    });
+    setFormOpen(false);
+    setIsEditing(false);
+    setEditItemId(null);
+    setUploadStatus("idle");
+  };
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -54,7 +69,25 @@ export function UserItems() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createItem.mutate(itemData);
+    if (isEditing && editItemId !== null) {
+      editItem.mutate({ id: editItemId, ...itemData });
+    } else {
+      createItem.mutate(itemData);
+    }
+  };
+
+  const handleEdit = (item: typeof items[0]) => {
+    setItemData({
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      condition: item.condition,
+      category: item.category,
+      imageUrl: item.imageUrl || "",
+    });
+    setEditItemId(item.id);
+    setIsEditing(true);
+    setFormOpen(true);
   };
 
   return (
@@ -62,7 +95,10 @@ export function UserItems() {
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-lg font-medium">Your University Items</h3>
         <button
-          onClick={() => setFormOpen(!formOpen)}
+          onClick={() => {
+            resetForm();
+            setFormOpen(!formOpen);
+          }}
           className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-500"
         >
           {formOpen ? "Cancel" : "Add New Item"}
@@ -231,7 +267,7 @@ export function UserItems() {
               className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-400"
               disabled={createItem.isPending || !itemData.imageUrl}
             >
-              {createItem.isPending ? "Adding Item..." : "Add Item"}
+              {isEditing ? "Save Changes" : "Add Item"}
             </button>
           </form>
         </div>
@@ -265,6 +301,12 @@ export function UserItems() {
                       </span>
                     </div>
                   </div>
+                  <button
+                    onClick={() => handleEdit(item)}
+                    className="rounded-md bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-300"
+                  >
+                    Edit
+                  </button>
                 </div>
               </li>
             ))}
