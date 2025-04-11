@@ -69,6 +69,9 @@ export const users = createTable("user", {
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   items: many(items),
+  buyerConversations: many(conversations, { relationName: "buyer" }),
+  sellerConversations: many(conversations, { relationName: "seller" }),
+  sentMessages: many(messages),
 }));
 
 export const accounts = createTable(
@@ -134,3 +137,80 @@ export const verificationTokens = createTable(
     ), // Add unique constraint on identifier
   }),
 );
+
+export const conversations = createTable(
+  "conversation",
+  {
+    id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+    buyerId: text("buyer_id", { length: 255 })
+      .notNull()
+      .references(() => users.id),
+    sellerId: text("seller_id", { length: 255 })
+      .notNull()
+      .references(() => users.id),
+    itemId: int("item_id").references(() => items.id),
+    createdAt: int("created_at", { mode: "timestamp" })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+    updatedAt: int("updated_at", { mode: "timestamp" })
+      .default(sql`(unixepoch())`)
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    buyerIdIdx: index("buyer_id_idx").on(table.buyerId),
+    sellerIdIdx: index("seller_id_idx").on(table.sellerId),
+    itemIdIdx: index("convo_item_id_idx").on(table.itemId),
+  }),
+);
+
+export const conversationsRelations = relations(
+  conversations,
+  ({ one, many }) => ({
+    buyer: one(users, {
+      fields: [conversations.buyerId],
+      references: [users.id],
+    }),
+    seller: one(users, {
+      fields: [conversations.sellerId],
+      references: [users.id],
+    }),
+    item: one(items, {
+      fields: [conversations.itemId],
+      references: [items.id],
+    }),
+    messages: many(messages),
+  }),
+);
+
+export const messages = createTable(
+  "message",
+  {
+    id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+    conversationId: int("conversation_id")
+      .notNull()
+      .references(() => conversations.id),
+    senderId: text("sender_id", { length: 255 })
+      .notNull()
+      .references(() => users.id),
+    content: text("content").notNull(),
+    read: int("read", { mode: "boolean" }).default(0),
+    createdAt: int("created_at", { mode: "timestamp" })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+  },
+  (table) => ({
+    conversationIdIdx: index("conversation_id_idx").on(table.conversationId),
+    senderIdIdx: index("sender_id_idx").on(table.senderId),
+  }),
+);
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  conversation: one(conversations, {
+    fields: [messages.conversationId],
+    references: [conversations.id],
+  }),
+  sender: one(users, {
+    fields: [messages.senderId],
+    references: [users.id],
+  }),
+}));

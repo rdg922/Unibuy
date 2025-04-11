@@ -25,6 +25,7 @@ export const itemRouter = createTRPCRouter({
         price: z.number().min(0).optional(),
         condition: z.string().optional(),
         category: z.string().optional(),
+        imageUrl: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -35,6 +36,7 @@ export const itemRouter = createTRPCRouter({
         condition: input.condition ?? "used",
         category: input.category ?? "other",
         createdById: ctx.session.user.id,
+        imageUrl: input.imageUrl,
       });
     }),
 
@@ -109,6 +111,19 @@ export const itemRouter = createTRPCRouter({
       limit: 100,
     });
   }),
+
+  getItemById: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const item = await ctx.db.query.items.findFirst({
+        where: eq(items.id, input.id),
+        with: {
+          user: true,
+        },
+      });
+
+      return item;
+    }),
 
   getSecretMessage: protectedProcedure.query(() => {
     return "you can now see this secret message!";

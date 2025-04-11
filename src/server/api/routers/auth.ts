@@ -2,7 +2,11 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  publicProcedure,
+  protectedProcedure,
+} from "~/server/api/trpc";
 import { users } from "~/server/db/schema";
 import { hashPassword, verifyPassword } from "~/server/auth/password";
 import {
@@ -313,4 +317,60 @@ export const authRouter = createTRPCRouter({
         });
       }
     }),
+
+  updateName: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().min(2).max(100),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const userId = ctx.session.user.id;
+        const { name } = input;
+
+        await ctx.db.update(users).set({ name }).where(eq(users.id, userId));
+
+        return { success: true };
+      } catch (error) {
+        console.error("Update name error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update name",
+        });
+      }
+    }),
+
+  // Add a new query to fetch current user profile
+  getCurrentUser: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const userId = ctx.session.user.id;
+
+      const userData = await ctx.db.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          // We don't include sensitive fields like password
+        },
+      });
+
+      if (!userData) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      return userData;
+    } catch (error) {
+      console.error("Get user profile error:", error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to get user profile",
+      });
+    }
+  }),
 });
