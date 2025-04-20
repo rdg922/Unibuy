@@ -77,9 +77,9 @@ export const chatRouter = createTRPCRouter({
         const buyer = await ctx.db.query.users.findFirst({
           where: eq(users.id, userId)
         });
-        // const item = await ctx.db.query.users.findFirst({
-        //   where: eq(items.id, input.itemId)
-        // });
+        const item = await ctx.db.query.items.findFirst({
+          where: eq(items.id, input.itemId)
+        });
 
         if(!seller) {
           throw new TRPCError({
@@ -93,14 +93,14 @@ export const chatRouter = createTRPCRouter({
             message: "Failed to find BUYER."
           })
         }
-        // if(!item) {
-        //   throw new TRPCError({
-        //     code: "INTERNAL_SERVER_ERROR",
-        //     message: "Failed to find ITEM."
-        //   })
-        // }
+        if(!item) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to find ITEM."
+          })
+        }
 
-        emailService.sendSoldNotificationEmail(seller.email, baseUrl, buyer.name!/*, item.name!*/);
+        emailService.sendSoldNotificationEmail(seller.email, baseUrl, buyer.name!, item.name!, item.id, input.initialMessage);
 
       return { conversation: newConversation[0], message: newMessage[0] };
     }),

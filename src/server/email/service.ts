@@ -110,20 +110,24 @@ export class EmailService {
     email: string,
     baseUrl: string,
     buyer: string,
-    //item: string
+    item: string,
+    id: number,
+    message: string
   ): Promise<void> {
 
+    const itemUrl = `${baseUrl}/items/${id}`
     
     if (env.NODE_ENV === "development") {
       console.log("====== ITEM SOLD NOTIFICATION ======");
       console.log(`To: ${email}`);
       console.log(`Subject: UniBuy: Someone wants your item!`);
-      console.log(`${buyer} is interested in one of your items!. This URL contains a link to your profile.`)
-      
+      console.log(`${buyer} is interested in ${item}! They said the following:`)
+      console.log(message)
+      console.log(`This URL contains a link to the item: ${itemUrl}`)
     }
 
     console.log(
-        `Sent notification email would be sent to ${email} mentioning an item.`
+        `Sent notification email would be sent to ${email} mentioning item ${item}.`
     );
   }
 }
