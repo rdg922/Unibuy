@@ -20,12 +20,14 @@ export function Marketplace() {
     condition: "all",
   });
   const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Filter items based on category and condition
   const filteredItems = items.filter((item) => {
     return (
       (filter.category === "all" || item.category === filter.category) &&
-      (filter.condition === "all" || item.condition === filter.condition)
+      (filter.condition === "all" || item.condition === filter.condition) &&
+      (item.name?.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   });
 
@@ -64,6 +66,10 @@ export function Marketplace() {
     setSortBy(e.target.value as SortOption);
   };
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
   return (
     <div>
       {/* Filtering and sorting controls */}
@@ -71,6 +77,23 @@ export function Marketplace() {
         <h2 className="text-xl font-semibold text-gray-900">Marketplace</h2>
 
         <div className="flex flex-wrap gap-3">
+          <div>
+            <label
+              htmlFor="search"
+              className="mr-2 text-sm font-medium text-gray-700"
+            >
+              Search:
+            </label>
+            <input
+              id="search"
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              placeholder="Search by name"
+              className="rounded-md border-gray-300 py-1 pl-2 pr-8 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+            />
+          </div>
+
           <div>
             <label
               htmlFor="sort-by"
