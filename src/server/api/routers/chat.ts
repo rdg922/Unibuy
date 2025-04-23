@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
-import { conversations, messages, users } from "~/server/db/schema";
+import { conversations, items, messages, users } from "~/server/db/schema";
 import { and, asc, desc, eq, or } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { emailService } from "~/server/email/service";
 
 export const chatRouter = createTRPCRouter({
   // Start a new conversation
@@ -67,6 +68,39 @@ export const chatRouter = createTRPCRouter({
           content: input.initialMessage,
         })
         .returning();
+
+        //Send an email
+        const baseUrl = ctx.headers?.origin ?? "http://localhost:3000";
+        const seller = await ctx.db.query.users.findFirst({
+          where: eq(users.id, input.sellerId),
+        });
+        const buyer = await ctx.db.query.users.findFirst({
+          where: eq(users.id, userId)
+        });
+        const item = await ctx.db.query.items.findFirst({
+          where: eq(items.id, input.itemId)
+        });
+
+        if(!seller) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to find SELLER."
+          })
+        }
+        if(!buyer) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to find BUYER."
+          })
+        }
+        if(!item) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to find ITEM."
+          })
+        }
+
+        emailService.sendSoldNotificationEmail(seller.email, baseUrl, buyer.name!, item.name!, item.id, input.initialMessage);
 
       return { conversation: newConversation[0], message: newMessage[0] };
     }),

@@ -40,6 +40,41 @@ export const itemRouter = createTRPCRouter({
       });
     }),
 
+  edit: protectedProcedure
+    .input(
+      z.object({
+        id: z.number().min(0),
+        name: z.string().min(1).optional(),
+        description: z.string().optional(),
+        price: z.number().min(0).optional(),
+        condition: z.string().optional(),
+        category: z.string().optional(),
+        imageUrl: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const curItems = await ctx.db.select().from(items)
+        .where(eq(items.id, input.id))
+        .all();
+
+      if (curItems.length === 0) {
+        throw new Error("Item not found");
+      }
+
+      const curItem = curItems[0]!;
+
+      await ctx.db.update(items).set({
+        name: input.name,
+        description: input.description ?? curItem.description,
+        price: input.price ?? curItem.price,
+        condition: input.condition ?? curItem.condition,
+        category: input.category ?? curItem.category,
+        imageUrl: input.imageUrl ?? curItem.imageUrl,
+      })
+        .where(eq(items.id, input.id))
+        .execute();
+    }),
+
   getLatest: protectedProcedure.query(async ({ ctx }) => {
     const item = await ctx.db.query.items.findFirst({
       orderBy: (items, { desc }) => [desc(items.createdAt)],
